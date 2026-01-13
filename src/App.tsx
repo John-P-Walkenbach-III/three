@@ -7,10 +7,9 @@ import * as THREE from 'three';
 /**
  * The "Liquid" Sphere Component
  */
-const AnimatedBlob = ({ baseColor }: { baseColor: string }) => {
+const AnimatedBlob = ({ baseColor, hovered, setHover }: { baseColor: string, hovered: boolean, setHover: (h: boolean) => void }) => {
   // We use the ! assertion because we know the ref will be assigned by the time useFrame runs
   const meshRef = useRef<THREE.Mesh>(null!);
-  const [hovered, setHover] = useState(false);
   const [active, setActive] = useState(false);
 
   const playSound = () => {
@@ -85,6 +84,7 @@ interface ParticleProps {
 
 const Particle = ({ factor, speed, xFactor, yFactor, zFactor }: ParticleProps) => {
   const ref = useRef<THREE.Mesh>(null!);
+  const [exploded, setExploded] = useState(false);
   
   useFrame((state) => {
     const t = state.clock.getElapsedTime();
@@ -97,12 +97,41 @@ const Particle = ({ factor, speed, xFactor, yFactor, zFactor }: ParticleProps) =
     // Rotate the particle
     ref.current.rotation.z += 0.01;
     ref.current.rotation.x += 0.01;
+
+    // Explosion Animation
+    const material = ref.current.material as THREE.MeshStandardMaterial;
+    if (exploded) {
+      ref.current.scale.multiplyScalar(1.05); // Expand rapidly
+      material.opacity -= 0.02; // Fade out
+      
+      // Respawn if invisible
+      if (material.opacity <= 0) {
+        setExploded(false);
+        ref.current.scale.set(1, 1, 1);
+        material.opacity = 0.6;
+      }
+    } else {
+      ref.current.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
+    }
   });
 
   return (
-    <mesh ref={ref}>
+    <mesh 
+      ref={ref} 
+      onPointerOver={(e) => {
+        e.stopPropagation(); // Prevent clicking through to the background
+        setExploded(true);
+      }}
+    >
       <octahedronGeometry args={[0.2, 0]} />
-      <meshStandardMaterial color="teal" transparent opacity={0.6} />
+      <meshStandardMaterial 
+        color={exploded ? "#ff0055" : "teal"} 
+        transparent 
+        opacity={0.6} 
+        emissive={exploded ? "#ff0055" : "black"}
+        emissiveIntensity={exploded ? 2 : 0}
+        toneMapped={false}
+      />
     </mesh>
   );
 };
@@ -236,7 +265,8 @@ const UI = ({ isPlaying, onToggleAudio, color, onChangeColor }: UIProps) => {
 export default function LiquidMetalScene() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [blobColor, setBlobColor] = useState('#888888');
+  const [blobColor, setBlobColor] = useState('#0088ff');
+  const [hovered, setHover] = useState(false);
 
   const toggleAudio = () => {
     // 1. If context exists, toggle suspend/resume
@@ -334,7 +364,7 @@ export default function LiquidMetalScene() {
         <pointLight position={[-10, -10, -10]} intensity={0.5} color="red" />
         <Environment preset="warehouse" />
 
-        <AnimatedBlob baseColor={blobColor} />
+        <AnimatedBlob baseColor={blobColor} hovered={hovered} setHover={setHover} />
         <FloatingParticles count={30} />
         
         <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
