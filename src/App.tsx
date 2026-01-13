@@ -211,6 +211,21 @@ const UI = ({ isPlaying, onToggleAudio, color, onChangeColor }: UIProps) => {
       >
         {isPlaying ? 'STOP SOUND' : 'PLAY SOUND'}
       </button>
+
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 20,
+          right: 20,
+          zIndex: 10,
+          color: '#aaa',
+          fontSize: '0.8rem',
+          fontFamily: 'system-ui, sans-serif',
+          pointerEvents: 'none',
+        }}
+      >
+        Created by John Walkenbach • {new Date().toLocaleDateString()}
+      </div>
     </>
   );
 };
